@@ -58,6 +58,7 @@ class Multitask(Dataset):
         )
         self.split = split
         self.pseudo_num = self.args.pseudo_num
+        self.bbox_shift = 20
 
     def __len__(self):
         return self.dataset_size
