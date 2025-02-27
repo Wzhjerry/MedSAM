@@ -25,6 +25,7 @@ import shutil
 import glob
 from multitask import Multitask
 import argparse
+from medpy.metric.binary import dc, jc
 
 
 # set seeds
@@ -295,7 +296,7 @@ def main():
     losses = []
     best_loss = 1e10
     # train_dataset = NpyDataset(args.tr_npy_path)
-    train_dataset = Multitask(args=args, mode="train")
+    train_dataset = Multitask(args=args, mode="val")
 
     print("Number of training samples: ", len(train_dataset))
     train_dataloader = DataLoader(
@@ -317,64 +318,18 @@ def main():
     if args.use_amp:
         scaler = torch.cuda.amp.GradScaler()
 
-    for epoch in range(start_epoch, num_epochs):
-        epoch_loss = 0
-        for step, (image, gt2D, boxes, _) in enumerate(tqdm(train_dataloader)):
-            optimizer.zero_grad()
-            boxes_np = boxes.detach().cpu().numpy()
-            image, gt2D = image.to(device), gt2D.to(device)
-            if args.use_amp:
-                ## AMP
-                with torch.autocast(device_type="cuda", dtype=torch.float16):
-                    medsam_pred = medsam_model(image, boxes_np)
-                    loss = seg_loss(medsam_pred, gt2D) + ce_loss(
-                        medsam_pred, gt2D.float()
-                    )
-                scaler.scale(loss).backward()
-                scaler.step(optimizer)
-                scaler.update()
-                optimizer.zero_grad()
-            else:
-                medsam_pred = medsam_model(image, boxes_np)
-                loss = seg_loss(medsam_pred, gt2D) + ce_loss(medsam_pred, gt2D.float())
-                loss.backward()
-                optimizer.step()
-                optimizer.zero_grad()
+    dscs, jacs = [], []
+    for step, (image, gt2D, boxes, _) in enumerate(tqdm(train_dataloader)):
+        boxes_np = boxes.detach().cpu().numpy()
+        image, gt2D = image.to(device), gt2D.to(device)
+        
+        medsam_pred = medsam_model(image, boxes_np)
 
-            epoch_loss += loss.item()
-            iter_num += 1
-
-        epoch_loss /= step
-        losses.append(epoch_loss)
-        if args.use_wandb:
-            wandb.log({"epoch_loss": epoch_loss})
-        print(
-            f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-        )
-        ## save the latest model
-        checkpoint = {
-            "model": medsam_model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "epoch": epoch,
-        }
-        torch.save(checkpoint, join(model_save_path, "medsam_model_latest.pth"))
-        ## save the best model
-        if epoch_loss < best_loss:
-            best_loss = epoch_loss
-            checkpoint = {
-                "model": medsam_model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "epoch": epoch,
-            }
-            torch.save(checkpoint, join(model_save_path, "medsam_model_best.pth"))
-
-        # %% plot loss
-        plt.plot(losses)
-        plt.title("Dice + Cross Entropy Loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("Loss")
-        plt.savefig(join(model_save_path, args.task_name + "train_loss.png"))
-        plt.close()
+        for i in range(len(image)):
+            dscs.append(dc(medsam_pred[i].cpu().numpy(), gt2D[i].cpu().numpy()))
+            jacs.append(jc(medsam_pred[i].cpu().numpy(), gt2D[i].cpu().numpy()))
+    
+    print(f"Mean DSC: {np.mean(dscs)}, Mean JAC: {np.mean(jacs)}")
 
 
 if __name__ == "__main__":

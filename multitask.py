@@ -25,18 +25,18 @@ class Multitask(Dataset):
         self.args.size = 1024
         self.args.pseudo_num = 1
         self.args.sub_data = [
-            # "DRIVE", 
-            # "FIVES", 
-            # "HRF", 
-            # "STARE", 
+            "DRIVE", 
+            "FIVES", 
+            "HRF", 
+            "STARE", 
             # "G1020", 
             # "GAMMA - task3", 
             # "ORIGA", 
             # "Papila", 
             # "REFUGE", 
-            "DDR - lesion_seg", 
-            "FGADR-Seg-set", 
-            "IDRiD"
+            # "DDR - lesion_seg", 
+            # "FGADR-Seg-set", 
+            # "IDRiD"
         ]
 
         self.x, self.y, self.names = self.load_name(args, split)
@@ -71,7 +71,7 @@ class Multitask(Dataset):
         mask = self.read_labels(self.y[idx], name, self.split)
 
         im = Image.fromarray(np.uint8(image))
-        mask = Image.fromarray(np.uint8(mask)).convert('1')
+        mask = Image.fromarray(np.uint8(mask))
 
         newsize = (1024, 1024)
         mask = mask.resize(newsize)
@@ -116,9 +116,6 @@ class Multitask(Dataset):
                 label = label[..., 0]
             # label = label[ymin:ymax, xmin:xmax]
             label = cv2.resize(label, (1024, 1024), interpolation=cv2.INTER_NEAREST)
-
-            # Convert label from numpy to Image
-            # target = Image.fromarray(np.uint8(label)).convert('1')
 
             if not split == 'test':
                 # Read pseudo labels for odoc and lesion
