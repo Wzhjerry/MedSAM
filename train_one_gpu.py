@@ -120,7 +120,7 @@ class NpyDataset(Dataset):
 # %% sanity test of dataset class
 # tr_dataset = NpyDataset("data/npy/CT_Abd")
 args = argparse.Namespace()
-tr_dataset = Multitask(args=args, mode="train")
+tr_dataset = Multitask(args=args, split="train")
 tr_dataloader = DataLoader(tr_dataset, batch_size=8, shuffle=True)
 for step, (image, gt, bboxes, names_temp) in enumerate(tr_dataloader):
     print(image.shape, gt.shape, bboxes.shape)
@@ -295,7 +295,7 @@ def main():
     losses = []
     best_loss = 1e10
     # train_dataset = NpyDataset(args.tr_npy_path)
-    train_dataset = Multitask(args=args, mode="train")
+    train_dataset = Multitask(args=args, split="train")
 
     print("Number of training samples: ", len(train_dataset))
     train_dataloader = DataLoader(
