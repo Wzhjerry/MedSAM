@@ -80,7 +80,7 @@ class Multitask(Dataset):
         x_min, x_max = np.min(x_indices), np.max(x_indices)
         y_min, y_max = np.min(y_indices), np.max(y_indices)
 
-        H, W = mask.shape
+        H, W = np.array(mask).shape
         x_min = max(0, x_min - random.randint(0, self.bbox_shift))
         x_max = min(W, x_max + random.randint(0, self.bbox_shift))
         y_min = max(0, y_min - random.randint(0, self.bbox_shift))
